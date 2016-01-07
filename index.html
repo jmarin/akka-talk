@@ -25,7 +25,7 @@ class: center, middle
 
 ### Building high performance backends in a distributed world
 
-Created by Juan Marin Otero / @jmarinotero
+Created by Juan Marin Otero / [@jmarinotero](http://twitter.com/jmarinotero)
 
 ---
 
@@ -46,9 +46,12 @@ Created by Juan Marin Otero / @jmarinotero
 Hello World:
 
 ```scala
+
+case object Greeting
+
 class HelloActor extends Actor {
   def receive = {
-    case Greeting => "Hello World"
+    case Greeting => println("Hello World")
     case _ => "I don't understand this message"
   }
 }
@@ -56,8 +59,18 @@ class HelloActor extends Actor {
 
 In order to run this we need an `ActorSystem` (runtime) and we need to start the actor:
 
+```scala
 val system = ActorSystem("system")
-system.actorOf(Props)
+val helloActor = system.actorOf(Props[HelloActor], "hello-actor")
+
+```
+
+Now we can send messages to it:
+
+```scala
+helloActor ! Greeting
+```
+
 
     </textarea>
     <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
