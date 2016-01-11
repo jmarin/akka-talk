@@ -165,8 +165,8 @@ Futures _compose_, allows us to describe parallel computations easily. The follo
 import scala.concurrent._
 import scala.concurrent.duration._
 
-def geocodePoint(parsed: ParsedAddress)
-def geocodeCensus(parsed: ParsedAddress)
+def geocodePoint(parsed: ParsedAddress): Future[Point]
+def geocodeCensus(parsed: ParsedAddress): Future[Point]
 
 val r = for {
   p <- geocodePoint(address)
