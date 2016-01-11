@@ -55,6 +55,19 @@ Created by Juan Marin Otero / [@jmarinotero](http://twitter.com/jmarinotero)
 
 ---
 
+# Some background: the hardware problem
+
+![Moore](img/moore.jpg)
+
+---
+
+# Some background: the software problem
+
+![Amdal](img/AmdahlsLaw.png)
+
+---
+
+
 # The Reactive Manifesto
 
 ![Reactive Manifesto](img/reactive-traitsv2.png)
@@ -123,7 +136,7 @@ helloActor ! Greeting
 
 # Futures 
 
-### _A data structure used to retrieve the result of some concurrent operation. This result can be accessed synchronously (blocking) or asynchronously (non-blocking)_
+#### _A data structure used to retrieve the result of some concurrent operation. This result can be accessed synchronously (blocking) or asynchronously (non-blocking)_
 
 Think of it as a read-only placeholder object for a result that doesn't exist yet
 
@@ -202,23 +215,96 @@ This will return a `Future[List[String]]`, it first gets a `Future[List[Employee
 ---
 
 
-# Utilities
+# Utilities: Event Bus
+A way to send messages to a group of actors. You can build your own by extending the API or use the `Event Stream`, the main event bus for an actor system. This allows publish / subscribe applications to be built easily. Event Stream is local only
 
-* Event Bus
-* Scheduler
-* Circuit Breaker
+```scala
+abstract class AllKindsOfLoans { def id: String }
+case class GoodLoan(id: String) extends AllKindsOfLoans
+case class BadLoan(id: String) extends AllKindsOfLoans
+  
+class Listener extends Actor {
+  def receive = {
+    case g: GoodLoan => println(s"${self.path.name} is listening to: ${g.id}")
+    case b: BadLoan  => println(s"${self.path.name} is listening to: ${b.id}")
+  }
+}
+ 
+val goodLoanListener = system.actorOf(Props(classOf[Listener], this))
+val allLoansListener = system.actorOf(Props(classOf[Listener], this))
+system.eventStream.subscribe(goodLoanListener, classOf[GoodLoan])
+system.eventStream.subscribe(allLoansListener, classOf[AllKindsOfLoans])
+ 
+// only allLoansListener gets this message,
+system.eventStream.publish(BadLoan("009"))
+ 
+goodLoanListener and allLoansListener will be notified about GoodLoan:
+system.eventStream.publish(GoodLoan("007"))
+```
+---
+
+
+# Utilities: Akka Scheduler
+
+When you want to send messsages to an actor at specific intervals.
+
+```scala
+val Tick = "tick"
+
+class TickActor extends Actor {
+  def receive = {
+    case Tick => //Do something with Tick
+  }
+}
+
+val tickActor = system.actorOf(Props(classOf[TickActor], this))
+//Use system's dispatcher as ExecutionContext
+import system.dispatcher
+ 
+//This will schedule to send the Tick-message
+//to the tickActor after 0ms repeating every 50ms
+val cancellable =
+  system.scheduler.schedule(0 milliseconds,
+    50 milliseconds,
+    tickActor,
+    Tick)
+ 
+//This cancels further Ticks to be sent
+cancellable.cancel()
+```
 
 ---
 
-# Clustering
+# Utilities: Akka Circuit Breaker
+
+Used to prevent cascading failures in distributed systems. Isolates failures, avoiding one part of the system bringing everything down. 
+
+Example: web api that overloads database, under failure condition you don't want it to receive more requests. The circuit breaker "opens" until the failure condition is resolved. 
+
+![Circuit Breaker](img/circuit-breaker-states.png)
 
 ---
 
-# Persistence
+# Akka Cluster
+
+#### _"Akka Cluster provides a fault-tolerant decentralized peer-to-peer based cluster membership service with no single point of failure or single point of bottleneck. It does this using gossip protocols and an automatic failure detector."_
+
+![Akka Cluster](img/member-states.png)
 
 ---
 
-# Streams
+# Akka Persistence
+
+---
+
+# Akka Streams
+
+Based on the [Reactive Streams](http://www.reactive-streams.org/) specification, it is still an experimental module (the API might change).
+
+Akka Streams deals with the problem of handling streams of potentially infinite data in asynchronous systems. The difference with the Reactive Streams initiative is it's focus on handling `backpressure` through asynchronous boundaries.
+
+An asynchronous boundary can be:
+* Another node in a cluster
 
 ---
 
@@ -254,7 +340,18 @@ This will return a `Future[List[String]]`, it first gets a `Future[List[Employee
   - Data will grow significantly, adding new fields
   - Schema has changed and will change in the future
 
+---
 
+# HMDA Architecture
+
+We need:
+
+* Distributed
+* Fault tolerant
+* Elastic (spike in traffic)
+* Performance
+
+---
 
 
 
