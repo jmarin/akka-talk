@@ -43,8 +43,48 @@ Created by Juan Marin Otero / [@jmarinotero](http://twitter.com/jmarinotero)
 
 ---
 
-# Introduction
+# About me
 
+* Solutions Architect @Chief, HMDA Team
+* Have been doing GIS software development for +15 years
+* Open Source contributor (GeoServer, GeoGit)
+* Previously: 
+  - CTO at Boundless
+  - Lead Developer for the National Broadband Map at the FCC
+  - Solutions Engineer at Esri
+
+---
+
+# The Reactive Manifesto
+
+![Reactive Manifesto](img/reactive-traitsv2.png)
+
+---
+![Akka](img/akka_full_color.svg)
+
+## _"Akka is a toolkit and runtime for building highly concurrent, distributed, and resilient message-driven applications on the JVM."_
+
+---
+
+# Actor Model
+
+* Objects which encapsulate state and behavior
+* Can only communicate with them by sending messages
+* Mailbox (message queue) => process one message at a time
+* They *share nothing* with other actors
+* Event based processes, very lightweight. ~400 bytes in memory, millions / GB of RAM
+* _Location Transparency_ => Distributable across a cluster of machines
+* Two types of messages:
+  - ! (bang operator) Fire and forget, returns inmmediately.
+  - ? (ask operator) sends message and returns a Future representing a possible reply at a later point in time
+
+---
+
+# Fault Tolerance
+
+Actors form _supervision hierarchies_.
+
+![Actor Supervision](img/actor-hierarchy.png)
 
 ---
 
