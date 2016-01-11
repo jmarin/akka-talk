@@ -88,9 +88,7 @@ Actors form _supervision hierarchies_.
 
 ---
 
-# Actors
-
-Hello World:
+# Actors: Hello World
 
 ```scala
 
@@ -119,9 +117,90 @@ helloActor ! Greeting
 ```
 ---
 
-# Futures 
+# Actors example: Chat application
 
 ---
+
+# Futures 
+
+### _A data structure used to retrieve the result of some concurrent operation. This result can be accessed synchronously (blocking) or asynchronously (non-blocking)_
+
+Think of it as a read-only placeholder object for a result that doesn't exist yet
+
+Futures require an `ExecutionContext` to work, it is similar to a `java.util.concurrent.Executor` and allows computations to operate in a new thread, a thread pool or onthe current thread (the last option is discouraged).
+
+The `scala.concurrent` package has `ExecutionContext.global` which is backed by a `ForkedJoinPool` thread pool, which allows programs to take advantage of multiple processors by submitting tasks to the pool thread. Execution contexts are configurable in Akka. 
+
+---
+
+# Futures: callbacks
+
+```scala
+import scala.util.{Success, Failure}
+
+val f: Future[List[String]] = Future {
+  session.getRecentPosts
+}
+
+f onComplete {
+  case Success(posts) => for (post <- posts) println(post)
+  case Failure(t) => println("An error has occured: " + t.getMessage)
+}
+```
+
+You can also go just through the "happy path"
+
+```scala
+f onSuccess {
+  case posts => for (post <- posts) println(post)
+}
+```
+
+---
+# Futures: Functional composition and for-comprehensions
+
+Futures _compose_, allows us to describe parallel computations easily. The following code snippet will wait until both Futures have completed, then return
+
+```scala
+import scala.concurrent._
+import scala.concurrent.duration._
+
+def geocodePoint(parsed: ParsedAddress)
+def geocodeCensus(parsed: ParsedAddress)
+
+val r = for {
+  p <- geocodePoint(address)
+  c <- geocodeCensus(address)              
+} yield (Result(p, c))
+
+println(Await.result(r, 1 seconds))
+```
+
+*Important: * `Await.result` blocks until the future completes. Never use this in real code (it is OK for testing)
+
+---
+# Actors and Futures
+
+The ask (`?`) operator returns a Future
+
+```scala
+val apiResponse: Future[String] = actorRef ? Request(payload:String)
+```
+
+This model is used a lot when sending messages through asynchronous boundaries. 
+              
+An alternative is to model the request-response cycle as a series of Actor messages (becomes more complicated, but has no timeout issues).
+
+The result can be transformed using functional programming techniques:
+
+```scala
+val employeeList = (actorRef ? GetEmployees).mapTo[List[Employee]].map(_.name)
+```
+
+This will return a `Future[List[String]]`, it first gets a `Future[List[Employee]]` and then maps the result to each employee's name (a String)
+
+---
+
 
 # Utilities
 
@@ -140,6 +219,44 @@ helloActor ! Greeting
 ---
 
 # Streams
+
+---
+
+# Case Study: HMDA
+
+### Home Mortgage Disclosure Act (HMDA)
+
+* Provide the citizens and public officials of the U.S. sufficient information:
+   - to enable them to determine whether covered institutions are filling their obligations to serve the housing needs of the communities and neighborhoods in which they are located; and 
+   - to assist public officials in distributing public sector investments in a manner designed to improve the private environment.
+
+* Assist in identifying possible discriminatory lending patterns and enforcing antidiscrimination statutes.
+
+* Enhanced understanding of mortgage markets.
+
+---
+
+# HMDA: some challenges
+
+* Data Ingestion
+  - ~7500 Financial Institutions file individual loan data
+  - 10 - 20 million records / year. Over 30 years of history
+  - It all comes at the same time → huge spike
+
+* Data publication
+  - We don’t know what this will look like yet, but most likely we will have several different publication streams
+  - Time to market. Now 6 months, we have to do 1 month (modified LAR). It should be 1 day or less
+  - Most value is in time series and geographic analysis
+
+* Data Management
+  - We need to version every loan to keep track of it through time (100% audit trail)
+  - We don’t know what questions we will ask of this data in the future
+  - Data will grow significantly, adding new fields
+  - Schema has changed and will change in the future
+
+
+
+
 
 
 
