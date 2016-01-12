@@ -438,16 +438,34 @@ address ~> broadcast
 
 ---
 
-# HMDA Architecture
+# HMDA Requirements
 
 We need:
 
-* Distributed
-* Fault tolerant
+* Distributed deployment (many small systems, microservices)
+* Fault tolerant (resilient to failure)
 * Elastic (spike in traffic)
 * Performance
+* Time series
+* 100% audit trail
+* Data transformations
+* Support for validating millions of records
+* Every record goes through more than 150 validation rules
 
 ---
+
+# How Akka fits the HMDA requirements
+
+* Audit log with Akka Persistence
+* Unknown publication needs benefit from Event Log (can replay and aggregate events in any new way)
+* Distributed Rule Engine for fast validation
+* We can use Scala Futures to perform tasks in parallel (i.e. run several validation rules on a single record at the same time)
+* Akka Streams allows us to transform data in any way we need. No need for ETL tools
+* Akka Cluster Sharding allows us to deploy thousands of Actors for LAR processing (at least one per Financial Institution), spreading the load across a cluster. If one fails it gets restarted, state is kept. 
+* Akka Cluster Metrics Extension allows us to send processing of data to a node that is not as loaded as others in the cluster. 
+* Akka Distributed PubSub extension allows us to send notifications across the cluster when certain events happen. Example: send email to FI when their data is public
+* We can use Akka Circuit Breaker to ensure that we're not abusing external resources (i.e. Authentication Service)
+* One of the biggest wins is leveraging the Actor Model and its Supervision Hierarchies. Makes for safe and fault tolerant applications
 
 
 
