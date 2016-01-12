@@ -39,6 +39,7 @@ Created by Juan Marin Otero / [@jmarinotero](http://twitter.com/jmarinotero)
 6. Clustering
 7. Persistence
 8. Streams
+9. Case study: HMDA
 
 
 ---
@@ -52,6 +53,16 @@ Created by Juan Marin Otero / [@jmarinotero](http://twitter.com/jmarinotero)
   - CTO at Boundless
   - Lead Developer for the National Broadband Map at the FCC
   - Solutions Engineer at Esri
+
+---
+
+# Some background: the theory
+
+* **Lambda Calculus:** is a formal system in mathematical logic for expressing computation based on function abstraction and application using binding and variable substitution. It is a universal model of computation equivalent to a Turing machine (Church-Turing Thesis, 1937)
+
+* **Object-oriented programming (OOP)** is a programming paradigm based on the concept of "objects", which are data structures that contain data, in the form of fields, often known as attributes; and code, in the form of procedures, often known as methods (1970s, development of Smalltalk)
+
+* The **Actor Model** is a mathematical model of concurrent computation that treats actors as the universal primitives for concurrent computation: in response to a message it receives, an actor can make local decisions, create more actors, send more messages, and determine how to respond to the next message received (Carl Hewit, 1973)
 
 ---
 
@@ -75,7 +86,7 @@ Created by Juan Marin Otero / [@jmarinotero](http://twitter.com/jmarinotero)
 ---
 ![Akka](img/akka_full_color.svg)
 
-## _"Akka is a toolkit and runtime for building highly concurrent, distributed, and resilient message-driven applications on the JVM."_
+### _"Akka is a toolkit and runtime for building highly concurrent, distributed, and resilient message-driven applications on the JVM."_
 
 ---
 
@@ -93,9 +104,8 @@ Created by Juan Marin Otero / [@jmarinotero](http://twitter.com/jmarinotero)
 
 ---
 
-# Fault Tolerance
+# Fault Tolerance: supervision hierarchies
 
-Actors form _supervision hierarchies_.
 
 ![Actor Supervision](img/actor-hierarchy.png)
 
@@ -140,7 +150,7 @@ helloActor ! Greeting
 
 Think of it as a read-only placeholder object for a result that doesn't exist yet
 
-Futures require an `ExecutionContext` to work, it is similar to a `java.util.concurrent.Executor` and allows computations to operate in a new thread, a thread pool or onthe current thread (the last option is discouraged).
+Futures require an `ExecutionContext` to work, it is similar to a `java.util.concurrent.Executor` and allows computations to operate in a new thread, a thread pool or on the current thread (the last option is discouraged).
 
 The `scala.concurrent` package has `ExecutionContext.global` which is backed by a `ForkedJoinPool` thread pool, which allows programs to take advantage of multiple processors by submitting tasks to the pool thread. Execution contexts are configurable in Akka. 
 
@@ -293,7 +303,59 @@ Example: web api that overloads database, under failure condition you don't want
 
 ---
 
+# Akka Cluster: How to use
+
+Akka Cluster only requires configuration. No code changes to your application!
+
+```scala
+akka {
+  actor {
+    provider = "akka.cluster.ClusterActorRefProvider"
+  }
+  remote {
+    log-remote-lifecycle-events = off
+    netty.tcp {
+      hostname = "127.0.0.1"
+      port = 0
+    }
+  }
+ 
+  cluster {
+    seed-nodes = [
+      "akka.tcp://ClusterSystem@127.0.0.1:2551",
+      "akka.tcp://ClusterSystem@127.0.0.1:2552"]
+ 
+    auto-down-unreachable-after = 10s
+  }
+}
+```
+
+---
+
+# Akka Cluster: Utilities
+
+#### Distributed Publish Subscribe
+  Allows publish / subscribe applications in clustered mode. Uses Cluster Singleton as mediator to route messages 
+#### Singleton
+  A Singleton Actor guarantees that only one copy of an Actor is present at once in the cluster. It will get restarted on another machine if the node fails.
+#### Sharding
+  Allows splitting your application across nodes and you want your actors to communicate with each other no matter which node they are running on.
+  
+#### Cluster Metrics Extension
+  Provides runtime metrics for the cluster. Allows more complex routing of messages, i.e. send message to the node that is using less resources at a certain point in time
+
+---
+
+
 # Akka Persistence
+
+A mechanism to perform **Event Sourcing**
+
+A pattern to mitigate the pitfalls of typical **CRUD** applications
+
+It uses an append-only store to record all the events that happen in an application, not just the current state. State of an object can be obtained by replaying all the events associated with it. The stream of events has a complete **audit log** of what has happend with the application through time. 
+
+**No data is lost, we can ask questions about the past**
 
 ---
 
@@ -301,12 +363,46 @@ Example: web api that overloads database, under failure condition you don't want
 
 Based on the [Reactive Streams](http://www.reactive-streams.org/) specification, it is still an experimental module (the API might change).
 
-Akka Streams deals with the problem of handling streams of potentially infinite data in asynchronous systems. The difference with the Reactive Streams initiative is it's focus on handling `backpressure` through asynchronous boundaries.
+Akka Streams deals with the problem of handling streams of potentially infinite data in asynchronous systems. The difference with the Reactive Streams initiative is it's focus on handling `backpressure` through asynchronous boundaries (a REST API running remotely, another thread, another CPU, etc.)
 
-An asynchronous boundary can be:
-* Another node in a cluster
+![Backpressure](img/reactive-streams-backpressure.png)
+---
+
+# Akka Streams: the Graph API
+
+These basic elements can be combined to create complex streaming data processing pipelines
+
+#### Source
+  A partial graph with exactly one output
+
+#### Sink
+  A partial graph with exactly one input
+
+#### Flow
+  A partial graph with exactly one input and exactly one output
+
+![Graph](img/source-flow-sink.png)
 
 ---
+
+# Akka Streams Example: Grasshopper
+
+Streaming Batch Geocoder (http://github.com/cfpb/grasshopper)
+
+![GeocodeFlow](img/geocode-flow.png)
+
+In code:
+
+```scala
+address ~> broadcast
+           broadcast.out(0) ~> geocodePointFlow         ~> zip.in0
+           broadcast.out(1) ~> parse ~> geocodeLineFlow ~> zip.in1
+           zip.out ~> response 
+   
+```
+
+---
+
 
 # Case Study: HMDA
 
