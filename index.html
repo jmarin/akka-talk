@@ -248,7 +248,7 @@ system.eventStream.subscribe(allLoansListener, classOf[AllKindsOfLoans])
 // only allLoansListener gets this message,
 system.eventStream.publish(BadLoan("009"))
  
-goodLoanListener and allLoansListener will be notified about GoodLoan:
+//goodLoanListener and allLoansListener will be notified about GoodLoan:
 system.eventStream.publish(GoodLoan("007"))
 ```
 ---
